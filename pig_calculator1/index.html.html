@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>豬場精算師 V5.0 (資產配置版)</title>
+    <style>
+        :root {
+            --primary: #2c3e50; /* 穩重深藍 */
+            --primary-light: #34495e;
+            --accent: #d35400; /* 警示橘 */
+            --highlight: #27ae60; /* 安全綠 */
+            --bg-gradient: linear-gradient(135deg, #eef2f3 0%, #8e9eab 100%);
+            --card-bg: #ffffff;
+            --text-main: #2d3436;
+            --text-sub: #636e72;
+            --radius: 16px;
+        }
+
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background: var(--bg-gradient);
+            background-attachment: fixed;
+            margin: 0;
+            padding: 0;
+            color: var(--text-main);
+            padding-bottom: 120px;
+        }
+
+        /* 頂部導航 */
+        .header {
+            background: rgba(44, 62, 80, 0.95);
+            backdrop-filter: blur(10px);
+            color: white;
+            padding: 15px 20px;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .header h1 { margin: 0; font-size: 1.1rem; font-weight: 700; letter-spacing: 0.5px; }
+        .badge { background: var(--accent); color: white; font-size: 0.65rem; padding: 4px 8px; border-radius: 12px; font-weight: 800; }
+
+        .container { padding: 20px; max-width: 600px; margin: 0 auto; }
+
+        /* 標題樣式 */
+        .section-header {
+            display: flex;
+            align-items: center;
+            margin: 25px 0 10px 5px;
+        }
+        .section-title {
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 1.2px;
+            color: var(--primary);
+            font-weight: 800;
+        }
+        .section-line { flex: 1; height: 2px; background: #dfe6e9; margin-left: 10px; opacity: 0.6; }
+
+        /* 卡片共用樣式 */
+        .card {
+            background: var(--card-bg);
+            border-radius: var(--radius);
+            padding: 20px;
+            margin-bottom: 15px;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.06);
+            border: 1px solid rgba(255,255,255,0.8);
+            transition: all 0.3s ease;
+        }
+        
+        /* 場域切換器 (Housing Toggles) */
+        .housing-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 15px;
+        }
+        .housing-option {
+            background: white;
+            padding: 15px 10px;
+            border-radius: 12px;
+            text-align: center;
+            cursor: pointer;
+            border: 2px solid transparent;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+            transition: all 0.2s;
+            position: relative;
+            overflow: hidden;
+        }
+        .housing-option.active {
+            border-color: var(--primary);
+            background: #fdfdfd;
+        }
+        .housing-option.active::after {
+            content: '✓';
+            position: absolute;
+            top: 5px;
+            right: 8px;
+            color: var(--primary);
+            font-weight: bold;
+        }
+        .housing-icon { font-size: 1.5rem; margin-bottom: 5px; display: block; }
+        .housing-title { font-weight: 700; font-size: 0.9rem; color: var(--primary); display: block;}
+        .housing-desc { font-size: 0.75rem; color: #999; margin-top: 4px; display: block;}
+
+        /* 輸入框美化 */
+        .input-wrapper { margin-bottom: 12px; position: relative; }
+        label { display: block; margin-bottom: 6px; font-weight: 600; font-size: 0.85rem; color: var(--text-sub); }
+        
+        input {
+            width: 100%;
+            padding: 14px 16px;
+            border: 2px solid #f1f2f6;
+            border-radius: 12px;
+            background: #f8f9fa;
+            font-size: 16px;
+            color: var(--text-main);
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+        input:focus {
+            background: white;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 4px rgba(44, 62, 80, 0.1);
+            outline: none;
+        }
+        /* 更新動畫 */
+        @keyframes flashUpdate {
+            0% { background-color: #ffeaa7; transform: scale(1.02); }
+            100% { background-color: #f8f9fa; transform: scale(1); }
+        }
+        .updated { animation: flashUpdate 0.6s ease-out; }
+
+        .input-unit {
+            position: absolute;
+            right: 15px;
+            top: 38px;
+            font-size: 0.8rem;
+            color: #b2bec3;
+            pointer-events: none;
+        }
+
+        /* 方案卡片特色 */
+        .scheme-card { position: relative; overflow: hidden; border-left: 6px solid #ccc; }
+        .scheme-a { border-left-color: #95a5a6; } /* 普通 */
+        .scheme-b { border-left-color: #e67e22; } /* 功能 */
+        
+        .scheme-header { display: flex; justify-content: space-between; margin-bottom: 15px; align-items: center; }
+        .scheme-name { font-weight: 800; font-size: 1.1rem; }
+        .scheme-tag { font-size: 0.75rem; padding: 4px 8px; border-radius: 6px; background: #eee; color: #666; font-weight: bold; }
+        
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+
+        /* 計算按鈕 */
+        #btnCalc {
+            width: 100%;
+            background: linear-gradient(135deg, var(--primary) 0%, #1a252f 100%);
+            color: white;
+            border: none;
+            padding: 18px;
+            border-radius: var(--radius);
+            font-size: 1.1rem;
+            font-weight: 700;
+            letter-spacing: 1px;
+            box-shadow: 0 10px 25px rgba(44, 62, 80, 0.4);
+            margin-top: 15px;
+            cursor: pointer;
+            transition: transform 0.1s;
+        }
+        #btnCalc:active { transform: scale(0.97); }
+
+        /* 結果區塊 */
+        #result { display: none; margin-top: 30px; }
+
+        /* 贏家展示卡 */
+        .winner-card {
+            background: linear-gradient(135deg, #27ae60 0%, #2ecc71 100%);
+            color: white;
+            text-align: center;
+            padding: 30px;
+            border-radius: 20px;
+            margin-bottom: 25px;
+            box-shadow: 0 15px 35px rgba(39, 174, 96, 0.3);
+            position: relative;
+            overflow: hidden;
+        }
+        .winner-card.loss { background: linear-gradient(135deg, #7f8c8d 0%, #95a5a6 100%); box-shadow: 0 15px 35px rgba(127, 140, 141, 0.3); }
+        
+        .winner-label { font-size: 0.8rem; opacity: 0.9; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
+        .winner-amount { font-size: 2.2rem; font-weight: 800; margin-bottom: 5px; }
+
+        /* 精緻表格 */
+        .table-card { padding: 0; overflow: hidden; }
+        table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+        th { background: #f1f2f6; color: #636e72; font-weight: 700; text-align: center; padding: 15px; }
+        td { padding: 15px; border-bottom: 1px solid #f1f2f6; text-align: right; color: var(--text-main); }
+        td:first-child { text-align: left; font-weight: 600; color: var(--primary); }
+        
+        .val-good { color: var(--highlight); font-weight: 700; }
+        .val-bad { color: #b2bec3; }
+
+        .advice-box {
+            background: #fff;
+            border-left: 4px solid var(--accent);
+            padding: 20px;
+            border-radius: 0 12px 12px 0;
+            margin-top: 20px;
+            font-size: 0.95rem;
+            line-height: 1.6;
+            color: #555;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+        }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <h1>🐖 豬場精算師</h1>
+    <span class="badge">V5.0 資產版</span>
+</div>
+
+<div class="container">
+
+    <div class="section-header">
+        <span class="section-title">硬體設施與風險 (Housing)</span>
+        <div class="section-line"></div>
+    </div>
+    
+    <div class="housing-grid">
+        <div id="btnTrad" class="housing-option active" onclick="setHousing('traditional')">
+            <span class="housing-icon">🛖</span>
+            <span class="housing-title">傳統半開放</span>
+            <span class="housing-desc">情境 A：風險高</span>
+        </div>
+        <div id="btnClosed" class="housing-option" onclick="setHousing('closed')">
+            <span class="housing-icon">🏭</span>
+            <span class="housing-title">高規水簾舍</span>
+            <span class="housing-desc">情境 B：風險低</span>
+        </div>
+    </div>
+    
+    <div class="card">
+        <div class="grid-2">
+            <div class="input-wrapper">
+                <label>疾病爆發機率 (Base Prob)</label>
+                <input type="number" id="diseaseProb" value="30" inputmode="decimal">
+                <span class="input-unit">%</span>
+            </div>
+            <div class="input-wrapper">
+                <label>目前肉豬市價</label>
+                <input type="number" id="marketPrice" value="90" inputmode="decimal">
+                <span class="input-unit">$/kg</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="section-header">
+        <span class="section-title">方案對決 (Feed Strategy)</span>
+        <div class="section-line"></div>
+    </div>
+
+    <div class="grid-2" style="grid-template-columns: 1fr;"> <div class="card scheme-card scheme-a">
+            <div class="scheme-header">
+                <div class="scheme-name">方案 A</div>
+                <div class="scheme-tag">普通飼料</div>
+            </div>
+            <div class="grid-2">
+                <div class="input-wrapper">
+                    <label>飼料單價</label>
+                    <input type="number" id="priceA" value="14.2" inputmode="decimal">
+                </div>
+                <div class="input-wrapper">
+                    <label>預期 FCR</label>
+                    <input type="number" id="fcrA" value="2.5" step="0.05" inputmode="decimal" style="color:var(--primary); font-weight:bold;">
+                </div>
+            </div>
+            <div class="input-wrapper">
+                <label>育成率(%) / 風險係數</label>
+                <div style="display:flex; gap:10px;">
+                    <input type="number" id="survivalA" value="90" inputmode="decimal" placeholder="育成率">
+                    <input type="number" id="riskFactorA" value="1.2" step="0.05" inputmode="decimal" placeholder="係數" style="background:#f1f2f6; width:90px; text-align:center;">
+                </div>
+            </div>
+        </div>
+
+        <div class="card scheme-card scheme-b">
+            <div class="scheme-header">
+                <div class="scheme-name">方案 B</div>
+                <div class="scheme-tag">功能性飼料</div>
+            </div>
+            <div class="grid-2">
+                <div class="input-wrapper">
+                    <label>飼料單價</label>
+                    <input type="number" id="priceB" value="16.5" inputmode="decimal">
+                </div>
+                <div class="input-wrapper">
+                    <label>預期 FCR</label>
+                    <input type="number" id="fcrB" value="2.5" step="0.05" inputmode="decimal" style="color:var(--primary); font-weight:bold;">
+                </div>
+            </div>
+            <div class="input-wrapper">
+                <label>育成率(%) / 風險係數</label>
+                <div style="display:flex; gap:10px;">
+                    <input type="number" id="survivalB" value="94" inputmode="decimal" placeholder="育成率">
+                    <input type="number" id="riskFactorB" value="0.9" step="0.05" inputmode="decimal" placeholder="係數" style="background:#f1f2f6; width:90px; text-align:center;">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <button id="btnCalc">開始計算風險模型 ➔</button>
+
+    <div id="result">
+        <div class="section-header">
+            <span class="section-title">精算報告</span>
+            <div class="section-line"></div>
+        </div>
+
+        <div class="winner-card" id="winnerCard">
+            <div class="winner-label">預期獲利差異 (PROFIT SPREAD)</div>
+            <div class="winner-amount" id="winnerAmount">$0</div>
+            <div id="winnerText">分析結果載入中...</div>
+        </div>
+
+        <div class="card table-card">
+            <table>
+                <thead>
+                    <tr>
+                        <th>關鍵指標</th>
+                        <th>方案 A</th>
+                        <th>方案 B</th>
+                    </tr>
+                </thead>
+                <tbody id="resultBody">
+                    </tbody>
+            </table>
+        </div>
+
+        <div class="advice-box">
+            <div style="font-weight:700; color:var(--primary); margin-bottom:8px;">💡 精算師建議</div>
+            <div id="adviceText"></div>
+        </div>
+    </div>
+
+</div>
+
+<script>
+// 定義情境數據 (依據您的圖片)
+const SCENARIOS = {
+    traditional: {
+        prob: 30,
+        riskA: 1.2,  // 普通飼料易受緊迫
+        riskB: 0.9   // 功能性飼料有保護力
+    },
+    closed: {
+        prob: 10,
+        riskA: 1.05, // 環境好，普通飼料風險係數降
+        riskB: 0.95  // 環境好，功能性飼料邊際效益遞減
+    }
+};
+
+// UI 切換邏輯
+function setHousing(type) {
+    // 1. 切換按鈕樣式
+    document.querySelectorAll('.housing-option').forEach(el => el.classList.remove('active'));
+    
+    if(type === 'traditional') {
+        document.getElementById('btnTrad').classList.add('active');
+    } else {
+        document.getElementById('btnClosed').classList.add('active');
+    }
+
+    // 2. 注入精算參數
+    const data = SCENARIOS[type];
+    
+    const fields = [
+        {id: 'diseaseProb', val: data.prob},
+        {id: 'riskFactorA', val: data.riskA},
+        {id: 'riskFactorB', val: data.riskB}
+    ];
+
+    fields.forEach(item => {
+        const el = document.getElementById(item.id);
+        el.value = item.val;
+        
+        // 觸發視覺閃爍特效 (Feedback)
+        el.classList.remove('updated');
+        void el.offsetWidth; // trigger reflow
+        el.classList.add('updated');
+    });
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    
+    // 預設載入傳統場數據
+    setHousing('traditional');
+
+    // 計算邏輯
+    document.getElementById('btnCalc').addEventListener('click', function() {
+        try {
+            const val = (id) => parseFloat(document.getElementById(id).value) || 0;
+            
+            // 全局參數
+            const marketPrice = val('marketPrice');
+            const diseaseProb = val('diseaseProb') / 100;
+            const targetWeight = 125;
+            const headCount = 2000;
+            const fixedCost = 1600;
+
+            // 模型函數
+            const runModel = (price, fcr, survival, riskFactor) => {
+                survival = survival / 100;
+                // 非線性損害: 係數 > 1 時，傷害指數放大
+                let damage = diseaseProb * 0.25 * Math.pow(riskFactor, 1.6);
+                let finalSurvival = survival * (1 - damage);
+                
+                let heads = Math.floor(headCount * finalSurvival);
+                let dead = headCount - heads;
+
+                let feedCostPig = targetWeight * fcr * price;
+                let costAlive = heads * feedCostPig;
+                let costDead = dead * (feedCostPig * 0.45); // 死亡豬平均消耗係數
+                let costFixed = headCount * fixedCost;
+
+                let revenue = heads * targetWeight * marketPrice;
+                let totalCost = costAlive + costDead + costFixed;
+                let netProfit = revenue - totalCost;
+                
+                return { heads, dead, costDead, netProfit, profitPerHead: netProfit/headCount };
+            };
+
+            const rA = runModel(val('priceA'), val('fcrA'), val('survivalA'), val('riskFactorA'));
+            const rB = runModel(val('priceB'), val('fcrB'), val('survivalB'), val('riskFactorB'));
+
+            // 結果處理
+            const diff = rB.netProfit - rA.netProfit;
+            const isBWin = diff > 0;
+            const absDiff = Math.abs(diff);
+
+            // 更新贏家卡
+            const wCard = document.getElementById('winnerCard');
+            const wAmt = document.getElementById('winnerAmount');
+            const wTxt = document.getElementById('winnerText');
+
+            if(isBWin) {
+                wCard.className = "winner-card"; // Green
+                wAmt.innerText = `+ $${Math.round(absDiff).toLocaleString()}`;
+                wTxt.innerText = "建議採用 方案 B (獲利提升)";
+            } else {
+                wCard.className = "winner-card loss"; // Gray
+                wAmt.innerText = `- $${Math.round(absDiff).toLocaleString()}`;
+                wTxt.innerText = "建議維持 方案 A (成本優先)";
+            }
+
+            // 更新表格
+            const fmt = (n) => "$" + Math.round(n).toLocaleString();
+            const resBody = document.getElementById('resultBody');
+            const clsA = !isBWin ? 'val-good' : 'val-bad';
+            const clsB = isBWin ? 'val-good' : 'val-bad';
+
+            resBody.innerHTML = `
+                <tr>
+                    <td>總淨利 (Net Profit)</td>
+                    <td><span class="${clsA}">${fmt(rA.netProfit)}</span></td>
+                    <td><span class="${clsB}">${fmt(rB.netProfit)}</span></td>
+                </tr>
+                <tr>
+                    <td>預期死亡頭數</td>
+                    <td style="color:${rA.dead > rB.dead ? '#e74c3c' : '#27ae60'}">${rA.dead} 頭</td>
+                    <td style="color:${rB.dead > rA.dead ? '#e74c3c' : '#27ae60'}">${rB.dead} 頭</td>
+                </tr>
+                <tr>
+                    <td>無效飼料浪費</td>
+                    <td style="color:#d35400">${fmt(rA.costDead)}</td>
+                    <td style="color:#d35400">${fmt(rB.costDead)}</td>
+                </tr>
+                <tr>
+                    <td>單頭 ROI</td>
+                    <td>${fmt(rA.profitPerHead)}</td>
+                    <td>${fmt(rB.profitPerHead)}</td>
+                </tr>
+            `;
+
+            // 更新建議
+            const housingType = document.querySelector('.housing-option.active .housing-title').innerText;
+            const advText = document.getElementById('adviceText');
+            
+            if(isBWin) {
+                advText.innerHTML = `在 <strong>${housingType}</strong> 的環境設定下（FCR ${val('fcrB')}），方案 B 透過較強的免疫營養，將死亡損失降至最低。<br><br>這證明了即使飼料單價高，但只要能減少 <strong>$${Math.round(rA.costDead - rB.costDead).toLocaleString()}</strong> 的無效浪費，整體投報率依然是正向的。`;
+            } else {
+                advText.innerHTML = `在 <strong>${housingType}</strong> 的環境下，由於環境本身已提供足夠保護（或方案 A 的成本優勢太大），方案 B 的「額外保護力」呈現邊際效益遞減。<br><br>建議：除非預期疾病爆發率會高於 ${((val('diseaseProb'))+15).toFixed(0)}%，否則目前使用方案 A 更具成本效益。`;
+            }
+
+            const resDiv = document.getElementById('result');
+            resDiv.style.display = 'block';
+            resDiv.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+        } catch(e) {
+            alert("計算錯誤");
+        }
+    });
+});
+</script>
+
+</body>
+</html>
